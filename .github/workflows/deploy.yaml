@@ -19,7 +19,7 @@ jobs:
           registry: 847795003432.dkr.ecr.us-east-1.amazonaws.com
           aws-access-key-id: AKIA4KZEFEAUAV34OMFO
           aws-secret-access-key: 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
-          Region: us-east-1
+          aws-region: us-east-1
 
       - name: Build, tag, and push Docker image to Amazon ECR
         env:
