@@ -7,8 +7,8 @@ import ReportImg from "../../public/assests/Images/icons8-vet-24.png";
 export default function Home() {
   return (
     <main>
-      <div className="flex flex-col px-4">
-        <div className="flex flex-col md:flex-row md:justify-around my-16 md:mx-16 md:my-32 ">
+      <div className="flex flex-col px-4 ">
+        <div className="flex flex-col md:flex-row md:justify-around space-x-5 my-16 md:mx-16 md:my-16 border border-b-4  ">
           <div className="flex flex-col space-y-14 flex-1">
             <div className="space-y-6">
               <h2 className="font-raleway text-gradient font-bold text-3xl md:text-6xl py-4">
@@ -35,8 +35,8 @@ export default function Home() {
               </button>
             </div>
           </div>
-          <div className="flex items-center justify-center flex-1 mt-8 md:mt-0">
-            <div className="w-full md:w-[30vw] h-[40vh] md:h-[50%] rounded-[30px] md:rounded-[59px] drop-shadow-2xl shadow-dark overflow-hidden">
+          <div className="flex   flex-1  md:mt-0 mt-8">
+            <div className="w-full md:w-[40vw] h-[50vh] md:h-[40%] rounded-[30px] md:rounded-[59px] drop-shadow-2xl shadow-dark overflow-hidden">
               <Image
                 className="object-cover w-full h-full"
                 src={HeroImage}
