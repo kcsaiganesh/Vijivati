@@ -1,9 +1,15 @@
 import { ReactNode } from "react";
-import Navbar from "./Components/ui/Navbar";
 import "./globals.css";
+import { Montserrat } from "next/font/google";
+
 interface LayoutProps {
   children: ReactNode;
 }
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+});
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
@@ -13,9 +19,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>vijivati</title>
       </head>
-      <body>
+      <body className={`${montserrat.className}`}>
         <div className="flex flex-col justify-between min-h-screen">
-          <Navbar />
           <main className="flex-1">{children}</main>
         </div>
       </body>

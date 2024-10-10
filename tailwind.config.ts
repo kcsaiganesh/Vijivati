@@ -9,14 +9,14 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        raleway: ["Raleway", "sans-serif"],
+        montserrat: ["Montserrat"],
       },
       colors: {
         text: "#0a0a0a",
         background: "#b7e4c7",
-        primary: "#2d6a4f",
-        secondary: "#52b788",
-        cta: "#dddf00",
+        primary: " #DAE7D1",
+        secondary: "#78B54E",
+        cta: "#D2FF22",
         light: "#d8f3dc",
         dark: "#081c15",
       },
