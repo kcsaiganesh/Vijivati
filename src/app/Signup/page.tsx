@@ -1,6 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import GoogleIcon from "../../../public/assests/Images/google.png";
 
 const SignupPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -59,7 +61,7 @@ const SignupPage: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen ">
+    <div className="flex flex-col  items-center justify-center min-h-screen ">
       <div className="space-y-12">
         <h2 className="text-2xl font-medium text-center">
           Create a new Account
@@ -102,20 +104,35 @@ const SignupPage: React.FC = () => {
             className="w-full max-w-xs h-[4vh] bg-primary rounded px-2 focus:outline-none"
           />
 
-          <button
-            type="submit"
-            className="w-auto h-[4vh]  bg-cta py-auto px-10 rounded"
-          >
-            Sign Up
-          </button>
+          <div className="pt-8">
+            <button
+              type="submit"
+              className="w-auto h-[4vh]   bg-cta  px-10 rounded"
+            >
+              Sign Up
+            </button>
+          </div>
         </form>
 
-        <p className="mt-4 text-center">
+        <p className="mt-2 text-center">
           Already have an account?{" "}
           <a href="/login" className="text-black underline underline-offset-1">
             Login
           </a>
         </p>
+        <div className="flex items-center justify-center  my-6">
+          <div className="border-t border-secondary w-[15vw]"></div>
+          <span className="mx-4 ">Or </span>
+          <div className="border-t border-secondary w-[15vw]"></div>
+        </div>
+        <div
+          className="mx-auto cursor-pointer text-center py-2"
+          onClick={() => {}}
+        ></div>
+      </div>
+      <div className="flex flex-row  space-x-4 py-4 px-3    rounded h-auto w-auto bg-secondary">
+        <Image src={GoogleIcon} alt="googleicon" width={25} height={25}></Image>
+        <p className="flex-none">SignUp with Google</p>
       </div>
     </div>
   );
