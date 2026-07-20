@@ -1,31 +1,35 @@
-import { ReactNode } from "react";
+import type { Metadata } from "next";
 import "./globals.css";
-import { Montserrat } from "next/font/google";
+import { AuthProvider } from "@/context/AuthContext";
+import { ToastProvider } from "@/context/ToastContext";
+import { SocketProvider } from "@/context/SocketContext";
+import DevPanel from "@/components/dev/DevPanel";
 
-interface LayoutProps {
-  children: ReactNode;
-}
 
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-});
+export const metadata: Metadata = {
+  title: "Pranzoo — Animal Rescue Platform",
+  description: "Connect, Report, Rescue. A technology-driven platform to facilitate stray animal rescue, adoption, and responsible pet ownership across India.",
+  keywords: ["animal rescue", "stray animals", "adoption", "India", "Pranzoo"],
+  openGraph: {
+    title: "Pranzoo — Animal Rescue Platform",
+    description: "Report stray animals, find rescue organizations, adopt pets, and volunteer.",
+    type: "website",
+  },
+};
 
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <head>
-        <meta charSet="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>vijivati</title>
-      </head>
-      <body className={`${montserrat.className}`}>
-        <div className="flex flex-col justify-between min-h-screen">
-          <main className="flex-1">{children}</main>
-        </div>
+      <body className="min-h-screen bg-gray-50 text-gray-900 antialiased">
+        <AuthProvider>
+          <SocketProvider>
+            <ToastProvider>
+              {children}
+              <DevPanel />
+            </ToastProvider>
+          </SocketProvider>
+        </AuthProvider>
       </body>
     </html>
   );
-};
-
-export default Layout;
+}
