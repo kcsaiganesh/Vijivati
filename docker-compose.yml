@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      # Define your environment variables here
+      # - NEXT_PUBLIC_API_URL=http://api.example.com
+    restart: always
