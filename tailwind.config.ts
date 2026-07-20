@@ -8,20 +8,21 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      fontFamily: {
-        montserrat: ["Montserrat"],
-      },
       colors: {
-        text: "#0a0a0a",
-        background: "#b7e4c7",
-        primary: " #DAE7D1",
-        secondary: "#78B54E",
-        cta: "#D2FF22",
-        light: "#d8f3dc",
-        dark: "#081c15",
+        pranzoo: {
+          50: '#f0fdf4',
+          100: '#dcfce7',
+          200: '#bbf7d0',
+          500: '#22c55e',
+          600: '#16a34a',
+          700: '#15803d',
+          800: '#166534',
+          900: '#14532d',
+        },
       },
     },
   },
   plugins: [],
 };
 export default config;
+
