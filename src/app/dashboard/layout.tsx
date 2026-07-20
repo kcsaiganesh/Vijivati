@@ -1,16 +1,17 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PawPrint, Bell, Home, AlertCircle, ClipboardList, Heart, Users, ChevronRight, User } from "lucide-react";
+import { PawPrint, Bell, Home, AlertCircle, ClipboardList, Heart, Users, User } from "lucide-react";
 import NotificationPanel from "@/components/ui/NotificationPanel";
-import { useState } from "react";
+import { motion } from "framer-motion";
 
 export default function CitizenLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isAuthenticated, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [notifOpen, setNotifOpen] = useState(false);
 
   useEffect(() => {
@@ -79,30 +80,48 @@ export default function CitizenLayout({ children }: { children: React.ReactNode 
       </main>
 
       {/* Bottom Tab Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
-        <div className="max-w-2xl mx-auto flex items-center justify-around px-2 h-16">
-          {navLinks.map(({ href, icon: Icon, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all group ${
-                typeof window !== "undefined" && window.location.pathname === href
-                  ? "text-emerald-700"
-                  : "text-gray-400"
-              }`}
-            >
-              {href === "/dashboard/report" ? (
-                <div className="w-12 h-12 -mt-6 rounded-2xl bg-emerald-700 shadow-lg shadow-emerald-700/30 flex items-center justify-center">
-                  <Icon className="w-5 h-5 text-white" />
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] pb-safe">
+        <div className="max-w-2xl mx-auto flex items-center justify-around px-2 h-16 relative">
+          {navLinks.map(({ href, icon: Icon, label }) => {
+            const isActive =
+              href === "/dashboard"
+                ? pathname === href
+                : pathname === href || pathname?.startsWith(`${href}/`);
+            
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`relative flex flex-col items-center justify-center w-16 h-14 transition-colors group z-10 ${
+                  isActive ? "text-emerald-700" : "text-gray-400"
+                }`}
+              >
+                {/* Shared Sliding Active Indicator for all 5 tabs */}
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabIndicator"
+                    className="absolute inset-1 bg-emerald-50 rounded-xl -z-10"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+                
+                {/* Dynamic Icon Bubble: Pops up and turns dark green ONLY when active */}
+                <div className={`absolute left-1/2 -translate-x-1/2 flex items-center justify-center transition-all duration-300 ease-out ${
+                  isActive 
+                    ? "-top-5 w-[3.25rem] h-[3.25rem] bg-emerald-700 text-white rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.08)] border-[3px] border-white scale-105" 
+                    : "top-2.5 w-6 h-6 bg-transparent border-[3px] border-transparent"
+                }`}>
+                  <Icon className="w-5 h-5" />
                 </div>
-              ) : (
-                <Icon className="w-5 h-5" />
-              )}
-              <span className={`text-[10px] font-semibold ${href === "/dashboard/report" ? "text-emerald-700 mt-1" : ""}`}>
-                {label}
-              </span>
-            </Link>
-          ))}
+                
+                <span className={`text-[10px] absolute transition-all duration-300 ${
+                  isActive ? "bottom-1 font-bold" : "bottom-1.5 font-semibold"
+                }`}>
+                  {label}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </nav>
 

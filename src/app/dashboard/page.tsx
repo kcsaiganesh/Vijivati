@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
-import { AlertCircle, PawPrint, Heart, Users, ChevronRight, MapPin, Clock, CheckCircle, AlertTriangle } from "lucide-react";
+import { AlertCircle, PawPrint, Heart, Users, ChevronRight, MapPin, Clock, CheckCircle, AlertTriangle, Gift } from "lucide-react";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 
@@ -56,13 +56,13 @@ const QUICK_ACTIONS = [
     color: "text-blue-700",
   },
   {
-    href: "/find-help",
-    icon: MapPin,
-    label: "Find Orgs",
-    sub: "Near you",
-    bg: "bg-amber-50",
-    iconBg: "bg-amber-500",
-    color: "text-amber-700",
+    href: "/dashboard/donate",
+    icon: Gift,
+    label: "Donate to NGO",
+    sub: "Support via UPI",
+    bg: "bg-emerald-50",
+    iconBg: "bg-emerald-500",
+    color: "text-emerald-700",
   },
 ];
 
