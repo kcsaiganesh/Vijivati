@@ -1,26 +1,62 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useToast } from "@/context/ToastContext";
-import { Heart, CreditCard, ShieldCheck, ShieldAlert, Check, Loader2, ArrowLeft, Smartphone } from "lucide-react";
+import { Heart, CreditCard, ShieldCheck, ShieldAlert, Check, Loader2, ArrowLeft, Search, Building2 } from "lucide-react";
 import api from "@/lib/api";
 
 const PRESET_AMOUNTS = [100, 500, 1000, 2000, 5000];
 
 const UPI_APPS = [
-  { id: "gpay", name: "Google Pay", color: "border-blue-500 bg-blue-50/30 text-blue-700", logo: "https://unpkg.com/simple-icons@v11/icons/googlepay.svg" },
-  { id: "phonepe", name: "PhonePe", color: "border-purple-500 bg-purple-50/30 text-purple-700", logo: "🟣" },
-  { id: "paytm", name: "Paytm", color: "border-cyan-500 bg-cyan-50/30 text-cyan-700", logo: "🔵" },
-  { id: "bhim", name: "BHIM UPI", color: "border-orange-500 bg-orange-50/30 text-orange-700", logo: "🔸" },
+  { 
+    id: "gpay", 
+    name: "GPay", 
+    color: "border-blue-500 bg-blue-50/30 text-blue-700", 
+    scheme: "gpay://upi/pay",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg"
+  },
+  { 
+    id: "phonepe", 
+    name: "PhonePe", 
+    color: "border-purple-500 bg-purple-50/30 text-purple-700", 
+    scheme: "phonepe://pay",
+    logoUrl: "https://download.logo.wine/logo/PhonePe/PhonePe-Logo.wine.png"
+  },
+  { 
+    id: "paytm", 
+    name: "Paytm", 
+    color: "border-cyan-500 bg-cyan-50/30 text-cyan-700", 
+    scheme: "paytmmp://pay",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg"
+  },
+  { 
+    id: "bhim", 
+    name: "BHIM", 
+    color: "border-orange-500 bg-orange-50/30 text-orange-700", 
+    scheme: "bhim://pay",
+    logoUrl: "https://upload.wikimedia.org/wikipedia/commons/e/e1/UPI-Logo-vector.svg"
+  },
 ];
+
+interface Organization {
+  _id: string;
+  organizationName: string;
+  stats?: { totalRescues: number };
+  totalNoReports?: number;
+}
 
 export default function DonatePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const toast = useToast();
 
-  const orgNameParam = searchParams.get("orgName") || "Paws & Care Foundation";
+  const orgNameParam = searchParams.get("orgName") || "";
+
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showOrgDropdown, setShowOrgDropdown] = useState(false);
+  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
 
   const [amount, setAmount] = useState<string>("500");
   const [selectedApp, setSelectedApp] = useState<string>("gpay");
@@ -29,8 +65,65 @@ export default function DonatePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [transactionId, setTransactionId] = useState("");
 
+  // Fetch top ranked organizations
+  useEffect(() => {
+    const fetchOrgs = async () => {
+      try {
+        const res = await api.get("/organizations?sortBy=rescues&limit=50");
+        let orgs = res.data?.success && res.data?.data ? res.data.data : [];
+
+        // Fallback dummy data if backend is empty for testing
+        if (orgs.length === 0) {
+          orgs = [
+            { _id: "dummy1", organizationName: "Paws & Care Foundation", stats: { totalRescues: 1250 } },
+            { _id: "dummy2", organizationName: "Bangalore Animal Rescue", stats: { totalRescues: 980 } },
+            { _id: "dummy3", organizationName: "Stray Hope NGO", stats: { totalRescues: 450 } },
+            { _id: "dummy4", organizationName: "Furry Friends Shelter", stats: { totalRescues: 320 } },
+          ];
+        }
+
+        setOrganizations(orgs);
+        
+        // If param exists, select it. Else select the #1 ranked org.
+        if (orgNameParam) {
+          const found = orgs.find((o: Organization) => o.organizationName === orgNameParam);
+          if (found) setSelectedOrg(found);
+          else setSelectedOrg({ _id: "custom", organizationName: orgNameParam });
+        } else if (orgs.length > 0) {
+          setSelectedOrg(orgs[0]);
+        }
+      } catch (err) {
+        console.error("Error fetching orgs:", err);
+        // Fallback on error
+        const fallbackOrgs = [
+          { _id: "dummy1", organizationName: "Paws & Care Foundation", stats: { totalRescues: 1250 } },
+          { _id: "dummy2", organizationName: "Bangalore Animal Rescue", stats: { totalRescues: 980 } },
+          { _id: "dummy3", organizationName: "Stray Hope NGO", stats: { totalRescues: 450 } },
+          { _id: "dummy4", organizationName: "Furry Friends Shelter", stats: { totalRescues: 320 } },
+        ];
+        setOrganizations(fallbackOrgs);
+        if (orgNameParam) {
+          const found = fallbackOrgs.find((o: Organization) => o.organizationName === orgNameParam);
+          if (found) setSelectedOrg(found);
+          else setSelectedOrg({ _id: "custom", organizationName: orgNameParam });
+        } else {
+          setSelectedOrg(fallbackOrgs[0]);
+        }
+      }
+    };
+    fetchOrgs();
+  }, [orgNameParam]);
+
+  const filteredOrgs = useMemo(() => {
+    if (!searchQuery) return organizations;
+    return organizations.filter(org => org.organizationName.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [searchQuery, organizations]);
+
   const handleDonateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedOrg) {
+      return toast.error("Missing Recipient", "Please select an NGO to donate to.");
+    }
     if (!amount || parseFloat(amount) <= 0) {
       return toast.error("Invalid Amount", "Please select or enter a valid donation amount.");
     }
@@ -49,15 +142,21 @@ export default function DonatePage() {
     }, 2500);
   };
 
-  // Generate dynamic QR Code payload stub using standard UPI format
-  // format: upi://pay?pa=recipient@upi&pn=name&am=amount&cu=INR
-  const upiPayload = `upi://pay?pa=ngo.${orgNameParam.toLowerCase().replace(/[^a-z0-9]/g, "")}@okaxis&pn=${encodeURIComponent(orgNameParam)}&am=${amount}&cu=INR&tn=AnimalRescueSponsorship`;
+  const currentOrgName = selectedOrg?.organizationName || "Selected NGO";
+  // Format standard upi://pay URI
+  const baseUpiParams = `?pa=ngo.${currentOrgName.toLowerCase().replace(/[^a-z0-9]/g, "")}@okaxis&pn=${encodeURIComponent(currentOrgName)}&am=${amount}&cu=INR&tn=AnimalRescueSponsorship`;
+  
+  // App-specific scheme
+  const getAppSpecificUri = () => {
+    const app = UPI_APPS.find(a => a.id === selectedApp);
+    if (app && app.scheme) return app.scheme + baseUpiParams;
+    return `upi://pay${baseUpiParams}`;
+  };
 
-  // QR Code generator source
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiPayload)}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`upi://pay${baseUpiParams}`)}`;
 
   return (
-    <div className="space-y-6 py-2 max-w-md mx-auto">
+    <div className="space-y-6 py-2 max-w-md mx-auto relative pb-20">
       {/* Header */}
       <div>
         <button
@@ -79,20 +178,60 @@ export default function DonatePage() {
             Pranzoo is a matchmaker platform, not a charity. 100% of your donation is sent directly to the organization's
             registered UPI account. We do not hold, handle, or charge commissions on funds.
           </p>
-          <p className="text-[10px] text-amber-700/80">
-            * Verify tax exemption status (80G/12A) directly with the NGO. Pranzoo disclaims all liability for tax claims or dispute resolutions.
-          </p>
         </div>
       </div>
 
       {step === "details" && (
-        <form onSubmit={handleDonateSubmit} className="space-y-5 bg-white border border-gray-100 rounded-3xl p-5 shadow-sm">
-          {/* Target NGO */}
-          <div>
+        <form onSubmit={handleDonateSubmit} className="space-y-6 bg-white border border-gray-100 rounded-3xl p-5 shadow-sm">
+          {/* Target NGO (Searchable Combo) */}
+          <div className="relative z-20">
             <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Recipient NGO</label>
-            <div className="bg-gray-50 px-4 py-3 rounded-2xl border border-gray-100 font-extrabold text-sm text-gray-800">
-              🏢 {orgNameParam}
+            <div 
+              onClick={() => setShowOrgDropdown(!showOrgDropdown)}
+              className="w-full bg-gray-50 px-4 py-3 rounded-2xl border border-gray-200 flex justify-between items-center cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-emerald-600" />
+                <span className="font-bold text-sm text-gray-800">{selectedOrg ? selectedOrg.organizationName : "Select an NGO"}</span>
+              </div>
             </div>
+
+            {showOrgDropdown && (
+              <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden z-50">
+                <div className="p-2 border-b border-gray-50">
+                  <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Search top NGOs..." 
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      className="w-full bg-gray-50 pl-9 pr-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                  </div>
+                </div>
+                <div className="max-h-48 overflow-y-auto p-1">
+                  {filteredOrgs.map((org, index) => (
+                    <div 
+                      key={org._id}
+                      onClick={() => {
+                        setSelectedOrg(org);
+                        setShowOrgDropdown(false);
+                      }}
+                      className="flex items-center justify-between p-3 hover:bg-emerald-50 rounded-xl cursor-pointer transition-colors"
+                    >
+                      <span className="text-sm font-bold text-gray-800">{org.organizationName}</span>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                        #{index + 1} ({org.stats?.totalRescues || org.totalNoReports || 0} rescues)
+                      </span>
+                    </div>
+                  ))}
+                  {filteredOrgs.length === 0 && (
+                    <div className="p-3 text-center text-xs text-gray-500 font-medium">No NGOs found</div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Amount Selector */}
@@ -129,18 +268,18 @@ export default function DonatePage() {
 
           {/* UPI App selector */}
           <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Select UPI Payment Application</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Select UPI App to Redirect</label>
             <div className="grid grid-cols-2 gap-2">
               {UPI_APPS.map((app) => (
                 <button
                   key={app.id}
                   type="button"
                   onClick={() => { setSelectedApp(app.id); setUpiId(""); }}
-                  className={`p-3 rounded-2xl border-2 flex items-center gap-2.5 transition-all text-xs font-bold ${
-                    selectedApp === app.id ? app.color : "border-gray-100 hover:border-gray-200"
+                  className={`p-3 rounded-2xl border-2 flex items-center justify-center gap-2 transition-all text-xs font-bold ${
+                    selectedApp === app.id ? app.color : "border-gray-100 hover:border-gray-200 bg-white"
                   }`}
                 >
-                  <span className="text-lg">{app.logo}</span>
+                  <img src={app.logoUrl} alt={app.name} className="h-5 object-contain" />
                   {app.name}
                 </button>
               ))}
@@ -158,14 +297,22 @@ export default function DonatePage() {
               type="text"
               value={upiId}
               onChange={(e) => { setUpiId(e.target.value); setSelectedApp(""); }}
-              placeholder="e.g. name@okhdfcbank"
+              placeholder="e.g. yourname@okhdfcbank"
               className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-emerald-600"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-sm rounded-2xl shadow-md transition-all flex items-center justify-center gap-2"
+            onClick={(e) => {
+              if (selectedOrg && amount && parseFloat(amount) > 0) {
+                // Trigger deep link directly for mobile if not using custom UPI
+                if (!upiId && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                   window.location.href = getAppSpecificUri();
+                }
+              }
+            }}
+            className="w-full py-4 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-emerald-700/20 transition-all flex items-center justify-center gap-2 mt-4"
           >
             <Heart className="w-4 h-4 fill-current" /> Proceed to Pay ₹{amount || "0"}
           </button>
@@ -187,7 +334,7 @@ export default function DonatePage() {
 
           <div className="bg-gray-50 px-4 py-3 rounded-2xl border border-gray-100 max-w-xs mx-auto">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Recipient</p>
-            <p className="text-xs font-extrabold text-gray-700 mt-0.5 truncate">{orgNameParam}</p>
+            <p className="text-xs font-extrabold text-gray-700 mt-0.5 truncate">{currentOrgName}</p>
             <p className="text-lg font-extrabold text-emerald-700 mt-1">₹{amount}</p>
           </div>
 
@@ -227,7 +374,7 @@ export default function DonatePage() {
           <div className="bg-gray-50 rounded-2xl p-4 text-left divide-y divide-gray-100 max-w-xs mx-auto text-xs space-y-2">
             <div className="flex justify-between py-1 pt-1.5">
               <span className="text-gray-400 font-medium">To NGO</span>
-              <span className="font-bold text-gray-800 truncate max-w-[65%]">{orgNameParam}</span>
+              <span className="font-bold text-gray-800 truncate max-w-[65%]">{currentOrgName}</span>
             </div>
             <div className="flex justify-between py-1">
               <span className="text-gray-400 font-medium">Amount</span>
