@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import toast from "react-hot-toast";
 
 type SocketEventHandler = (data: any) => void;
 
@@ -58,6 +59,24 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       // Proxy all events to registered handlers
       const proxyEvent = (event: string) => {
         socket.on(event, (data: any) => {
+          // Global automatic toasts for critical events
+          if (event === "RESCUE_DISPATCH") {
+            toast.custom(
+              (t: any) => (
+                <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-xl pointer-events-auto flex ring-1 ring-black ring-opacity-5 p-4 border-l-4 border-rose-500`}>
+                  <div className="flex-1 w-0">
+                    <p className="text-sm font-bold text-gray-900">🚨 Emergency Dispatch</p>
+                    <p className="mt-1 text-sm text-gray-500">New {data?.reportData?.animalType} rescue report assigned to you!</p>
+                  </div>
+                </div>
+              ), { duration: 8000 }
+            );
+          } else if (event === "NEW_NOTIFICATION") {
+            toast.success(data?.notification?.title || "New Notification", {
+                duration: 5000,
+            });
+          }
+
           const handlers = handlersRef.current.get(event);
           if (handlers) handlers.forEach((fn) => fn(data));
         });

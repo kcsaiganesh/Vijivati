@@ -78,23 +78,47 @@ export default function ReportWizard() {
 
   const handleGps = () => {
     setIsGpsLoading(true);
+    
+    // Check if the browser supports geolocation
+    if (!navigator.geolocation) {
+      setIsGpsLoading(false);
+      toast.error("GPS unavailable", "Geolocation is not supported by your browser.");
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         update({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
         setIsGpsLoading(false);
         toast.success("Location detected!", "GPS coordinates captured.");
       },
-      () => {
+      (err) => {
         setIsGpsLoading(false);
-        toast.error("GPS unavailable", "Please pin your location on the map or type an address.");
-      }
+        let errorMsg = "Please pin your location on the map or type an address.";
+        
+        if (err.code === 1) {
+            errorMsg = "Location permission denied. Please allow location access in your browser settings.";
+        } else if (err.code === 2) {
+            errorMsg = "Location unavailable. Ensure your device's GPS is turned on.";
+        } else if (err.code === 3) {
+            errorMsg = "Location request timed out. Please try again or use the map.";
+        } 
+        
+        // Mobile browsers block GPS over HTTP
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+            errorMsg = "Mobile browsers require HTTPS to use GPS. Please use the map instead.";
+        }
+        
+        toast.error("GPS Error", errorMsg);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
   const canProceed = () => {
     if (step === 0) return !!form.animalType && form.conditions.length > 0;
     if (step === 1) return !!(form.address || form.latitude);
-    if (step === 2) return !!form.reporterName && !!form.reporterPhone;
+    if (step === 2) return !!form.reporterName && form.reporterPhone.length === 10;
     return true;
   };
 
@@ -303,10 +327,22 @@ export default function ReportWizard() {
             <label className="block text-xs font-bold text-gray-700 mb-1.5">Phone Number</label>
             <div className="relative">
               <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input required value={form.reporterPhone} onChange={(e) => update({ reporterPhone: e.target.value })}
-                placeholder="+91 98765 43210"
+              <input required value={form.reporterPhone}
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                pattern="[0-9]{10}"
+                onChange={(e) => {
+                  // Strict validation: Indian mobile format, digits only, max 10
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  update({ reporterPhone: val });
+                }}
+                placeholder="10-digit mobile number"
                 className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-emerald-600" />
             </div>
+            {form.reporterPhone.length > 0 && form.reporterPhone.length < 10 && (
+                <p className="text-[10px] text-rose-500 font-medium mt-1 pl-1">Phone number must be exactly 10 digits</p>
+            )}
           </div>
         </div>
       )}
