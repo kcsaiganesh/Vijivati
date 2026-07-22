@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PawPrint, Plus, Search, X, Loader2 } from "lucide-react";
+import { PawPrint, Plus, Search, X, Loader2, UploadCloud, Trash2 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -10,6 +10,8 @@ export default function AdoptionsPage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -48,6 +50,38 @@ export default function AdoptionsPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const payload = new FormData();
+    payload.append("file", file);
+
+    try {
+      setUploadingImage(true);
+      const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/media/upload`,
+        payload,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true,
+        }
+      );
+      if (res.data.success && res.data.media?.url) {
+        setUploadedImages((prev) => [...prev, res.data.media.url]);
+        toast.success("Image uploaded successfully!");
+      }
+    } catch (error) {
+      toast.error("Failed to upload image");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setUploadedImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -56,7 +90,8 @@ export default function AdoptionsPage() {
       const payload = {
         ...formData,
         breed: formData.breed.split(',').map(s => s.trim()), // Convert comma separated to array
-        age: parseInt(formData.age) || 0
+        age: parseInt(formData.age) || 0,
+        images: uploadedImages,
       };
 
       const res = await axios.post(
@@ -68,6 +103,7 @@ export default function AdoptionsPage() {
         toast.success("Adoption listing created!");
         setIsModalOpen(false);
         fetchAdoptions();
+        setUploadedImages([]);
         setFormData({
             name: "",
             type: "DOG",
@@ -237,9 +273,59 @@ export default function AdoptionsPage() {
                 </div>
               </div>
 
-              <div className="space-y-1">
+               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-700">Description</label>
                 <textarea required name="description" value={formData.description} onChange={handleChange} rows={4} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500" placeholder="Tell us about the pet..."></textarea>
+              </div>
+
+              {/* Photo Upload Section */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-gray-700">Photos (Up to 5)</label>
+                
+                {/* Upload Button */}
+                {uploadedImages.length < 5 && (
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                      id="pet-photo-upload"
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="pet-photo-upload"
+                      className="w-full h-24 border-2 border-dashed border-gray-200 hover:border-emerald-500 hover:bg-emerald-50/50 rounded-xl cursor-pointer flex flex-col items-center justify-center transition-all"
+                    >
+                      {uploadingImage ? (
+                        <Loader2 className="w-6 h-6 text-emerald-600 animate-spin" />
+                      ) : (
+                        <UploadCloud className="w-6 h-6 text-gray-400" />
+                      )}
+                      <span className="text-xs text-gray-500 font-semibold mt-1">
+                        {uploadingImage ? "Uploading..." : "Click to upload photo"}
+                      </span>
+                    </label>
+                  </div>
+                )}
+
+                {/* Previews */}
+                {uploadedImages.length > 0 && (
+                  <div className="grid grid-cols-5 gap-2 mt-2">
+                    {uploadedImages.map((url, index) => (
+                      <div key={index} className="relative h-16 bg-gray-50 rounded-xl border overflow-hidden group">
+                        <img src={url} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
