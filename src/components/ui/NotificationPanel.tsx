@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { X, Bell, Check, CheckCheck, Trash2, PawPrint, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { useSocket } from "@/context/SocketContext";
+import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 
 interface Notification {
@@ -46,6 +47,7 @@ export default function NotificationPanel({ open, onClose }: Props) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const socket = useSocket();
+  const { user } = useAuth();
 
   const fetchNotifications = useCallback(async () => {
     setIsLoading(true);
@@ -149,36 +151,40 @@ export default function NotificationPanel({ open, onClose }: Props) {
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
-              {notifications.map((n) => (
-                <div key={n._id}
-                  className={`flex items-start gap-3 p-4 transition-colors ${!n.isRead ? "bg-emerald-50/50" : "hover:bg-gray-50"}`}>
-                  {/* Icon */}
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 ${!n.isRead ? "bg-emerald-100" : "bg-gray-100"}`}>
-                    {TYPE_ICONS[n.type] || "🔔"}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={`text-sm leading-snug ${!n.isRead ? "font-bold text-gray-900" : "font-semibold text-gray-700"}`}>
-                        {n.title}
-                      </p>
-                      {!n.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 mt-1" />
-                      )}
+              {notifications.map((n) => {
+                const viewUrl = user?.userType === "organization"
+                  ? `/organizations/dashboard/reports/${n.reportRef?._id}`
+                  : `/dashboard/reports/${n.reportRef?._id}`;
+                return (
+                  <div key={n._id}
+                    className={`flex items-start gap-3 p-4 transition-colors ${!n.isRead ? "bg-emerald-50/50" : "hover:bg-gray-50"}`}>
+                    {/* Icon */}
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 ${!n.isRead ? "bg-emerald-100" : "bg-gray-100"}`}>
+                      {TYPE_ICONS[n.type] || "🔔"}
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{n.body}</p>
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="text-[10px] text-gray-400 font-medium">{timeAgo(n.createdAt)}</span>
-                      {n.reportRef && (
-                        <Link
-                          href={`/dashboard/reports/${n.reportRef._id}`}
-                          onClick={onClose}
-                          className="text-[10px] font-bold text-emerald-700 hover:underline"
-                        >
-                          View Rescue →
-                        </Link>
-                      )}
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={`text-sm leading-snug ${!n.isRead ? "font-bold text-gray-900" : "font-semibold text-gray-700"}`}>
+                          {n.title}
+                        </p>
+                        {!n.isRead && (
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 mt-1" />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{n.body}</p>
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="text-[10px] text-gray-400 font-medium">{timeAgo(n.createdAt)}</span>
+                        {n.reportRef && (
+                          <Link
+                            href={viewUrl}
+                            onClick={onClose}
+                            className="text-[10px] font-bold text-emerald-700 hover:underline"
+                          >
+                            View Rescue →
+                          </Link>
+                        )}
                       {!n.isRead && (
                         <button onClick={() => markRead(n._id)} className="text-[10px] font-bold text-gray-400 hover:text-gray-600">
                           Mark read

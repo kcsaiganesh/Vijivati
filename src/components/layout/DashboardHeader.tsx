@@ -1,16 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { Bell, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import NotificationPanel from "@/components/ui/NotificationPanel";
 
 export default function DashboardHeader() {
   const { user } = useAuth();
+  const [notifOpen, setNotifOpen] = useState(false);
   const displayName = user?.organizationName || user?.fullName || user?.name || "Organization";
 
   return (
     <div className="w-full bg-white border border-gray-100 rounded-xl p-3.5 mb-6 flex items-center justify-start space-x-4 shadow-sm">
       <button
         aria-label="Notifications"
+        onClick={() => setNotifOpen(true)}
         className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-full transition-colors"
       >
         <Bell className="w-5 h-5 text-gray-600" />
@@ -23,6 +27,8 @@ export default function DashboardHeader() {
         </div>
         <span>{displayName}</span>
       </div>
+
+      <NotificationPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
     </div>
   );
 }

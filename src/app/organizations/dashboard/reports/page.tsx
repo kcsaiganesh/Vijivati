@@ -1,39 +1,135 @@
 "use client";
 
-import { useState } from "react";
-import { Filter, Search } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Filter, Search, Loader2, ChevronDown } from "lucide-react";
+import Link from "next/link";
+import api from "@/lib/api";
 
 interface Report {
-  id: string;
-  type: string;
-  location: string;
-  status: "PENDING" | "IN_PROGRESS" | "RESOLVED";
-  urgency: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
-  date: string;
+  _id: string;
+  reportId: string;
+  animalType: string;
+  status: string;
+  urgencyType: string;
+  address?: string;
+  reportSubmittedTime: string;
 }
 
-const mockReports: Report[] = [
-  {
-    id: "REP001",
-    type: "Dog",
-    location: "MG Road, Bangalore",
-    status: "PENDING",
-    urgency: "HIGH",
-    date: "2024-04-12",
-  },
-  {
-    id: "REP002",
-    type: "Cat",
-    location: "Indiranagar, Bangalore",
-    status: "IN_PROGRESS",
-    urgency: "MEDIUM",
-    date: "2024-04-11",
-  },
-];
+// Custom Premium Dropdown Component
+function CustomDropdown({
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: { value: string; label: string }[];
+  placeholder: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedOption = options.find((o) => o.value === value);
+
+  return (
+    <div className="relative inline-block text-left min-w-[120px]">
+      <div>
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="inline-flex w-full justify-between items-center gap-x-1.5 rounded-xl bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-200 hover:bg-gray-50 transition-all focus:outline-none"
+        >
+          {selectedOption ? selectedOption.label : placeholder}
+          <ChevronDown className="-mr-1 h-3.5 w-3.5 text-gray-400" />
+        </button>
+      </div>
+
+      {isOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="absolute right-0 z-20 mt-1.5 min-w-full origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none divide-y divide-gray-50 overflow-hidden">
+            <div className="py-1">
+              <button
+                onClick={() => {
+                  onChange("");
+                  setIsOpen(false);
+                }}
+                className="block w-full text-left px-4 py-2 text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+              >
+                Clear
+              </button>
+              {options.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => {
+                    onChange(opt.value);
+                    setIsOpen(false);
+                  }}
+                  className={`block w-full text-left px-4 py-2 text-xs hover:bg-gray-50 hover:text-gray-900 transition-colors ${
+                    value === opt.value ? "bg-emerald-50 text-emerald-800 font-bold" : "text-gray-700"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  REPORTED: "Reported",
+  DISPATCHED: "Dispatched",
+  EN_ROUTE: "En Route",
+  ON_SCENE: "On Scene",
+  RESCUED: "Rescued",
+  TREATED: "Treated",
+  RECOVERED: "Recovered",
+  REHOMED: "Rehomed",
+  CLOSED: "Closed",
+  CANCELLED: "Cancelled",
+};
 
 export default function ReportsPage() {
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [urgencyFilter, setUrgencyFilter] = useState("");
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      setLoading(true);
+      try {
+        const queryParams = new URLSearchParams();
+        if (statusFilter) queryParams.append("status", statusFilter);
+        if (urgencyFilter) queryParams.append("urgency", urgencyFilter);
+
+        const res = await api.get(`/reports?${queryParams.toString()}`);
+        if (res.data?.success) {
+          setReports(res.data.data);
+        }
+      } catch (error) {
+        console.error("Error loading reports", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, [statusFilter, urgencyFilter]);
+
+  const filteredReports = reports.filter((r) => {
+    const matchSearch =
+      r.reportId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.animalType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.address?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchSearch;
+  });
 
   return (
     <div className="space-y-6">
@@ -45,11 +141,6 @@ export default function ReportsPage() {
             Manage animal reports and cases
           </p>
         </div>
-
-        <button className="flex items-center space-x-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs rounded-xl shadow-sm transition-all">
-          <Filter className="w-4 h-4" />
-          <span>Filter</span>
-        </button>
       </div>
 
       {/* Filters Bar */}
@@ -65,125 +156,117 @@ export default function ReportsPage() {
           />
         </div>
 
-        <select className="px-3.5 py-2 border border-gray-200 rounded-xl text-xs text-gray-700 bg-white focus:outline-none focus:border-emerald-600">
-          <option value="">Status</option>
-          <option value="PENDING">Pending</option>
-          <option value="IN_PROGRESS">In Progress</option>
-          <option value="RESOLVED">Resolved</option>
-        </select>
+        <CustomDropdown
+          value={statusFilter}
+          onChange={setStatusFilter}
+          placeholder="Status"
+          options={[
+            { value: "REPORTED", label: "Reported" },
+            { value: "DISPATCHED", label: "Dispatched" },
+            { value: "EN_ROUTE", label: "En Route" },
+            { value: "ON_SCENE", label: "On Scene" },
+            { value: "RESCUED", label: "Rescued" },
+            { value: "TREATED", label: "Treated" },
+            { value: "RECOVERED", label: "Recovered" },
+            { value: "REHOMED", label: "Rehomed" },
+            { value: "CLOSED", label: "Closed" },
+            { value: "CANCELLED", label: "Cancelled" },
+          ]}
+        />
 
-        <select className="px-3.5 py-2 border border-gray-200 rounded-xl text-xs text-gray-700 bg-white focus:outline-none focus:border-emerald-600">
-          <option value="">Urgency</option>
-          <option value="HIGH">High</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="LOW">Low</option>
-        </select>
-
-        <select className="px-3.5 py-2 border border-gray-200 rounded-xl text-xs text-gray-700 bg-white focus:outline-none focus:border-emerald-600">
-          <option value="">Date Range</option>
-          <option value="today">Today</option>
-          <option value="week">This Week</option>
-          <option value="month">This Month</option>
-        </select>
+        <CustomDropdown
+          value={urgencyFilter}
+          onChange={setUrgencyFilter}
+          placeholder="Urgency"
+          options={[
+            { value: "IMMEDIATE", label: "🚨 Immediate" },
+            { value: "HIGH", label: "⚡ High" },
+            { value: "MODERATE", label: "🔶 Moderate" },
+            { value: "LOW", label: "💚 Low" },
+          ]}
+        />
       </div>
 
       {/* Reports Data Table */}
       <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-gray-600">
-            <thead className="bg-gray-50/70 border-b border-gray-100 text-[11px] uppercase font-semibold text-gray-400">
-              <tr>
-                <th className="py-3 px-4">ID</th>
-                <th className="py-3 px-4">Type</th>
-                <th className="py-3 px-4">Location</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Urgency</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {mockReports.map((report) => (
-                <tr key={report.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="py-3.5 px-4 font-semibold text-gray-800">
-                    {report.id}
-                  </td>
-                  <td className="py-3.5 px-4 text-gray-700">{report.type}</td>
-                  <td className="py-3.5 px-4 text-gray-700">{report.location}</td>
-                  <td className="py-3.5 px-4">
-                    <span
-                      className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase ${
-                        report.status === "PENDING"
-                          ? "bg-amber-100 text-amber-700"
-                          : report.status === "IN_PROGRESS"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-emerald-100 text-emerald-700"
-                      }`}
-                    >
-                      {report.status}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <span
-                      className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase ${
-                        report.urgency === "HIGH"
-                          ? "bg-red-100 text-red-600"
-                          : "bg-amber-100 text-amber-600"
-                      }`}
-                    >
-                      {report.urgency}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <button
-                      onClick={() => setSelectedReport(report)}
-                      className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs rounded-lg transition-all shadow-sm"
-                    >
-                      View Details
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Details Modal */}
-      {selectedReport && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
-            <h3 className="text-lg font-bold text-gray-900 border-b pb-3">
-              Case Details - {selectedReport.id}
-            </h3>
-            <div className="space-y-2 text-xs text-gray-700">
-              <p>
-                <span className="font-semibold text-gray-900">Animal Type:</span>{" "}
-                {selectedReport.type}
-              </p>
-              <p>
-                <span className="font-semibold text-gray-900">Location:</span>{" "}
-                {selectedReport.location}
-              </p>
-              <p>
-                <span className="font-semibold text-gray-900">Urgency:</span>{" "}
-                {selectedReport.urgency}
-              </p>
-              <p>
-                <span className="font-semibold text-gray-900">Report Date:</span>{" "}
-                {selectedReport.date}
-              </p>
-            </div>
-            <div className="flex justify-end pt-4 border-t">
-              <button
-                onClick={() => setSelectedReport(null)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-xl"
-              >
-                Close
-              </button>
-            </div>
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
           </div>
-        </div>
-      )}
+        ) : filteredReports.length === 0 ? (
+          <div className="text-center py-20 text-gray-500">
+            <p>No reports found matching your criteria.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs text-gray-600">
+              <thead className="bg-gray-50/70 border-b border-gray-100 text-[11px] uppercase font-semibold text-gray-400">
+                <tr>
+                  <th className="py-3 px-4">ID</th>
+                  <th className="py-3 px-4">Type</th>
+                  <th className="py-3 px-4">Location</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Urgency</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredReports.map((report) => (
+                  <tr key={report._id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="py-3.5 px-4 font-semibold text-gray-800">
+                      {report.reportId}
+                    </td>
+                    <td className="py-3.5 px-4 text-gray-700 font-medium">{report.animalType}</td>
+                    <td className="py-3.5 px-4 text-gray-700 truncate max-w-[200px]">
+                      {report.address || "GPS location"}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase ${
+                          report.status === "REPORTED"
+                            ? "bg-amber-100 text-amber-700"
+                            : report.status === "DISPATCHED" || report.status === "EN_ROUTE"
+                            ? "bg-blue-100 text-blue-700"
+                            : report.status === "ON_SCENE"
+                            ? "bg-purple-100 text-purple-700"
+                            : report.status === "RESCUED" || report.status === "TREATED" || report.status === "RECOVERED"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {STATUS_LABELS[report.status] || report.status}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase ${
+                          report.urgencyType === "IMMEDIATE"
+                            ? "bg-rose-100 text-rose-700"
+                            : report.urgencyType === "HIGH"
+                            ? "bg-orange-100 text-orange-700"
+                            : report.urgencyType === "MODERATE"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-emerald-100 text-emerald-700"
+                        }`}
+                      >
+                        {report.urgencyType}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <Link
+                        href={`/organizations/dashboard/reports/${report._id}`}
+                        className="inline-block px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs rounded-lg transition-all shadow-sm"
+                      >
+                        View Details
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

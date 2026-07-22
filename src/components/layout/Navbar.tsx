@@ -7,11 +7,11 @@ export default function Navbar() {
   const pathname = usePathname();
 
   const navLinks = [
-    { name: "Report Animal", href: "/report-animal" },
-    { name: "Find Help", href: "/find-help" },
-    { name: "Adopt", href: "/adopt" },
-    { name: "Donate", href: "/donate" },
-    { name: "Volunteer", href: "/volunteer" },
+    { name: "Report Animal", href: "/dashboard/report" },
+    { name: "Find Help", href: "/dashboard" },
+    { name: "Adopt", href: "/dashboard/adopt" },
+    { name: "Donate", href: "/dashboard/donate" },
+    { name: "Volunteer", href: "/dashboard/volunteer" },
   ];
 
   return (
